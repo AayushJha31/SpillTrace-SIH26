@@ -16,3 +16,10 @@ data/sar/sar_samples/
 
 # Large AIS datasets
 data/ais/ais-2025-01-08.csv.zst
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Temporary test files
+test_mask.png
