@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from ..schemas import SpillGeometry, SpillMetadataResponse, SpillResponse, SpillUploadResponse
+from app.schemas import SpillGeometry, SpillMetadataResponse, SpillResponse, SpillUploadResponse
 
 router = APIRouter(prefix="/api/spills", tags=["spills"])
 

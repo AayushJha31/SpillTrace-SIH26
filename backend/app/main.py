@@ -1,24 +1,33 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-from .routes.spills import router as spills_router
+from app.core.config import settings
+from app.api.routes import system, scenes
+from app.schemas import scene
 
-app = FastAPI(title="SpillTrace Backend", version="0.1.0")
+app = FastAPI(title=settings.app_name)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(spills_router)
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "internal_server_error",
+            "message": str(exc),
+            "details": None,
+            "run_id": request.headers.get("x-run-id"),
+        },
+    )
 
 
-@app.get("/health")
-def health_check():
-    return {
-        "status": "ok",
-        "service": "spilltrace-backend",
-    }
+app.include_router(system.router, prefix=settings.api_prefix)
+app.include_router(scenes.router, prefix=settings.api_prefix)
