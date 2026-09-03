@@ -33,3 +33,6 @@ __pycache__/
 
 # Generated compatibility validation output
 data/manifests/scenario_compatibility_report.json
+
+# Generated AIS track GeoJSON exports
+data/ais/reports/*.geojson

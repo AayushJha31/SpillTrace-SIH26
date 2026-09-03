@@ -703,3 +703,74 @@ Interpretation:
 - The sequential scan was faster on the current 9,977-row development table because index traversal and spatial predicate overhead can exceed the cost of scanning a small table.
 - The index-aware query should be retained for spatial/corridor filtering on larger real AIS subsets, where GiST index selectivity is more valuable.
 - All measured timings are local-development benchmarks and must not be presented as production-scale performance claims.
+
+
+### API-ready vessel-track GeoJSON export
+
+Exporter:
+
+```text
+data/queries/export_vessel_tracks_geojson.py
+```
+
+The exporter returns selected real AIS tracks as a GeoJSON `FeatureCollection`, with one `LineString` Feature per MMSI containing at least two observations in the selected spatial-temporal window.
+
+Development export command:
+
+```cmd
+python data\queries\export_vessel_tracks_geojson.py --start-utc 2025-01-08T00:00:00Z --end-utc 2025-01-08T00:10:00Z --min-longitude -90.10000 --max-longitude -89.90000 --min-latitude 29.70000 --max-latitude 30.00000
+```
+
+Generated local output:
+
+```text
+data/ais/reports/vessel_tracks_feature_collection.geojson
+```
+
+Feature-level fields include:
+
+```text
+mmsi
+track_start_time
+track_end_time
+position_count
+gap_count
+max_gap_seconds
+track_continuity
+ais_completeness
+source_file
+positions
+```
+
+Each position record includes:
+
+```text
+observed_at
+longitude
+latitude
+sog_knots
+cog_degrees
+heading_degrees
+source_file
+source_row_number
+```
+
+Output contract:
+
+```text
+Top-level type: FeatureCollection
+Track feature type: Feature
+Track geometry type: LineString
+CRS: EPSG:4326
+Coordinate order: [longitude, latitude]
+Timestamp format: ISO 8601 UTC ending in Z
+```
+
+The generated output explicitly sets:
+
+```text
+candidate_ranking_enabled: false
+compatibility_state: insufficient_data
+```
+
+The export is map/timeline development output only. It uses the real local AIS development dataset dated 2025-01-08 and must not be used as vessel-attribution evidence for `SPILL_TEST3_001`, whose origin-time window is in 2026.
