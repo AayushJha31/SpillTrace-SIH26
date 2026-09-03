@@ -1,0 +1,154 @@
+{
+  "spill_id": "SPILL_TEST3_001",
+  "manifest_version": "1.0",
+  "scenario_status": "blocked",
+  "scenario_status_reason": "Data-backed vessel attribution is blocked because no AIS dataset with verified temporal coverage for the origin window is available, wind/current forcing is analyst-parameter-driven, and prototype georeferencing uses injected coordinates.",
+  "sar": {
+    "source": "Sentinel-1",
+    "acquisition_start_utc": "2026-09-02T00:00:00Z",
+    "acquisition_end_utc": "2026-09-02T00:00:00Z",
+    "source_crs": "EPSG:4326",
+    "output_crs": "EPSG:4326",
+    "slick_geometry_path": "day4_outputs/slick_geometry.geojson",
+    "observed_slick_centroid": {
+      "type": "Point",
+      "coordinates": [
+        71.058396,
+        19.495814
+      ]
+    },
+    "georeferencing_status": "prototype_injected_coordinates",
+    "georeferencing_limitation": "The supplied prototype coordinates must not be described as independently ground-truth-verified."
+  },
+  "drift": {
+    "run_id": "DRIFT_MC250_SEED42_001",
+    "mode": "Analyst Parameter-Driven Scenario Simulation",
+    "hindcast_duration_hours": 12,
+    "time_step_seconds": 3600,
+    "particle_count": 250,
+    "random_seed": 42,
+    "horizontal_diffusivity_m2_per_s": 1.0,
+    "movement_method": "geopy.distance.geodesic using WGS-84 ellipsoid",
+    "hindcast_swept_corridor_path": "day5_outputs/sunidhi_real_scenario_final.json#hindcast_swept_corridor_geojson",
+    "final_origin_uncertainty_polygon_path": "day5_outputs/sunidhi_real_scenario_final.json#final_origin_uncertainty_polygon_geojson",
+    "hindcast_path_path": "day5_outputs/sunidhi_real_scenario_final.json#hindcast_path_geojson",
+    "origin_point": {
+      "type": "Point",
+      "coordinates": [
+        70.709029,
+        19.495748
+      ]
+    },
+    "origin_time_window": {
+      "start_utc": "2026-09-01T10:00:00Z",
+      "end_utc": "2026-09-01T14:00:00Z"
+    },
+    "final_origin_uncertainty_radius_m": 1191.87,
+    "wind": {
+      "speed_m_per_s": 7.7167,
+      "direction_degrees_from": 270,
+      "drift_coefficient": 0.03,
+      "source": "unavailable / analyst-parameter-driven"
+    },
+    "current": {
+      "speed_m_per_s": 0.6173,
+      "direction_degrees_to": 90,
+      "coefficient": 1.0,
+      "source": "unavailable / analyst-parameter-driven"
+    },
+    "ground_truth": {
+      "origin_latitude": null,
+      "origin_longitude": null,
+      "reference_source": null,
+      "drift_location_error": null,
+      "evaluation_status": "ground_truth_unavailable"
+    }
+  },
+  "ais": {
+    "development_source_file": "data/ais/ais_sample_10000.csv",
+    "cleaned_parquet_file": "data/ais/cleaned/ais_sample_10000_cleaned.parquet",
+    "quality_report_file": "data/ais/reports/ais_sample_10000_quality_report.json",
+    "data_time_range": {
+      "start_utc": "2025-01-08T00:00:00Z",
+      "end_utc": "2025-01-08T18:49:10Z"
+    },
+    "geographic_bounds": {
+      "min_longitude": -159.35849,
+      "max_longitude": -63.85972,
+      "min_latitude": 14.54614,
+      "max_latitude": 49.65558
+    },
+    "row_count": 9977,
+    "unique_mmsi_count": 6890,
+    "usage_restriction": "Development and ETL/query validation only. This AIS dataset must not be used as evidence for SPILL_TEST3_001 because its time range does not overlap the supplied origin-time window."
+  },
+  "compatibility": {
+    "state": "insufficient_data",
+    "candidate_ranking_enabled": false,
+    "candidate_api_expected_status_code": 409,
+    "checks": {
+      "sar_crs_valid": {
+        "status": "pass",
+        "detail": "Supplied SAR source and output CRS are EPSG:4326."
+      },
+      "geojson_coordinate_order": {
+        "status": "pass",
+        "detail": "All supplied GeoJSON coordinates use [longitude, latitude]."
+      },
+      "sar_georeferencing_independently_verified": {
+        "status": "fail",
+        "detail": "Prototype georeferencing uses injected coordinates."
+      },
+      "ais_temporal_overlap": {
+        "status": "fail",
+        "detail": "AIS development data covers 2025-01-08, while required origin-time window is 2026-09-01T10:00:00Z to 2026-09-01T14:00:00Z."
+      },
+      "ais_geographic_coverage": {
+        "status": "unverified",
+        "detail": "AIS geographic coverage cannot serve this spill scenario until a temporally compatible real AIS source is provided."
+      },
+      "environmental_forcing_data_backed": {
+        "status": "fail",
+        "detail": "Wind and current values are analyst-parameter-driven; independently verifiable forcing-source metadata is unavailable."
+      },
+      "drift_mode_label_present": {
+        "status": "pass",
+        "detail": "Drift mode is explicitly labelled Analyst Parameter-Driven Scenario Simulation."
+      },
+      "ground_truth_available": {
+        "status": "unavailable",
+        "detail": "Actual origin coordinates, reference source, and drift location error are unavailable."
+      }
+    },
+    "blocking_reasons": [
+      {
+        "code": "AIS_TEMPORAL_COVERAGE_MISMATCH",
+        "message": "The available AIS development dataset does not overlap the required origin-time window."
+      },
+      {
+        "code": "ENVIRONMENTAL_FORCING_NOT_DATA_BACKED",
+        "message": "Wind and current forcing are analyst-parameter-driven and have no independently verifiable source metadata."
+      },
+      {
+        "code": "PROTOTYPE_GEOREFERENCING_LIMITATION",
+        "message": "The scenario uses injected prototype coordinates and is not independently ground-truth-verified."
+      }
+    ],
+    "safe_user_message": "Vessel attribution is unavailable for this scenario because compatible AIS coverage and data-backed environmental forcing are not available. No vessel candidates have been generated."
+  },
+  "provenance": {
+    "created_by": "Pratyush Jha",
+    "purpose": "Day 4 compatibility checkpoint for SpillTrace",
+    "generated_from": [
+      "Final Drift-to-AIS Handoff for SPILL_TEST3_001",
+      "data/ais/reports/ais_sample_10000_quality_report.json",
+      "data/ais/reports/ais_sample_10000_parquet_validation.json"
+    ],
+    "limitations": [
+      "No compatible real AIS coverage has been supplied for the 2026-09-01 origin-time window.",
+      "Drift forcing is analyst-parameter-driven, not independently data-backed.",
+      "Prototype georeferencing uses injected coordinates.",
+      "Ground-truth origin and drift error are unavailable."
+    ]
+  }
+}

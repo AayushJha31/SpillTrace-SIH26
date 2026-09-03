@@ -498,3 +498,103 @@ Analyst Parameter-Driven Scenario Simulation
 ```
 
 because wind/current source metadata is unavailable. It must not be described as independently data-backed environmental drift evidence.
+
+
+
+## Scenario compatibility checkpoint and schema extension
+
+### Scenario manifest
+
+Scenario manifest:
+
+```text
+data/manifests/scenario_manifest.json
+```
+
+Compatibility validator:
+
+```text
+data/etl/validate_scenario_compatibility.py
+```
+
+Generated compatibility report:
+
+```text
+data/manifests/scenario_compatibility_report.json
+```
+
+Run command:
+
+```cmd
+python data\etl\validate_scenario_compatibility.py
+```
+
+Computed result for `SPILL_TEST3_001`:
+
+| Check | Result |
+|---|---|
+| Compatibility state | `insufficient_data` |
+| Candidate ranking enabled | `false` |
+| Expected candidate API status | `409` |
+| AIS temporal overlap | `false` |
+| SAR source/output CRS | `EPSG:4326` |
+| GeoJSON coordinate order | `[longitude, latitude]` |
+| Drift mode | `Analyst Parameter-Driven Scenario Simulation` |
+
+Blocking reasons:
+
+- `AIS_TEMPORAL_COVERAGE_MISMATCH`: Available development AIS data is dated 2025-01-08, while the required drift origin-time window is 2026-09-01T10:00:00Z to 2026-09-01T14:00:00Z.
+- `ENVIRONMENTAL_FORCING_NOT_DATA_BACKED`: Wind/current values are analyst-parameter-driven and independently verifiable forcing-source metadata is unavailable.
+- `PROTOTYPE_GEOREFERENCING_LIMITATION`: Supplied prototype geometry uses injected coordinates and must not be described as independently ground-truth-verified.
+
+Safe behavior:
+
+```text
+Vessel attribution is unavailable for this scenario.
+No vessel candidates have been generated.
+```
+
+The local 2025 AIS sample can be used for ETL, PostGIS loading, query development, and test validation only. It must not be used as evidence for `SPILL_TEST3_001`.
+
+### Day 4 database migration
+
+Migration file:
+
+```text
+data/migrations/002_day4_tracking_quality_audit.sql
+```
+
+Apply command:
+
+```cmd
+docker exec -i spilltrace-db psql -U spilltrace -d spilltrace < data\migrations\002_day4_tracking_quality_audit.sql
+```
+
+The migration adds the Day 4 tables without changing existing AIS rows:
+
+| Table | Purpose |
+|---|---|
+| `vessel_tracks` | Stores real selected AIS track geometry as `geometry(LineString, 4326)`, time bounds, continuity/completeness fields, gap statistics, and source provenance |
+| `data_quality_reports` | Stores quality-report references and calculated metrics for ETL, Parquet validation, scenario compatibility, SAR metadata, drift metadata, and future candidate ranking |
+| `audit_events` | Stores traceable actual ETL, compatibility, filtering, and blocked-status events |
+
+New indexes:
+
+```text
+idx_vessel_tracks_geometry_gist
+idx_vessel_tracks_spill_time
+idx_vessel_tracks_mmsi
+idx_vessel_tracks_gap_statistics_gin
+idx_data_quality_reports_spill_type
+idx_data_quality_reports_status
+idx_data_quality_reports_metrics_gin
+idx_audit_events_spill_created_at
+idx_audit_events_event_type
+idx_audit_events_details_gin
+```
+
+Database verification after applying the migration:
+
+- Required project tables exist: `spill_events`, `spill_images`, `ais_positions`, `vessel_tracks`, `vessel_candidates`, `data_quality_reports`, and `audit_events`.
+- Existing real AIS development records remain unchanged: `ais_positions = 9,977`.
+- No scenario records, vessel tracks, candidates, quality reports, or audit events were inserted during the schema migration.

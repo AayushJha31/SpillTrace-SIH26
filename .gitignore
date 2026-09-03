@@ -30,3 +30,6 @@ data/ais/reports/
 .pytest_cache/
 __pycache__/
 *.pyc
+
+# Generated compatibility validation output
+data/manifests/scenario_compatibility_report.json
