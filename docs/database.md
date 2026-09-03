@@ -598,3 +598,108 @@ Database verification after applying the migration:
 - Required project tables exist: `spill_events`, `spill_images`, `ais_positions`, `vessel_tracks`, `vessel_candidates`, `data_quality_reports`, and `audit_events`.
 - Existing real AIS development records remain unchanged: `ais_positions = 9,977`.
 - No scenario records, vessel tracks, candidates, quality reports, or audit events were inserted during the schema migration.
+
+
+## Selective AIS loading and vessel-track query benchmarks
+
+### Selective Parquet-to-PostGIS loader
+
+Updated loader:
+
+```text
+data/etl/load_ais_to_postgis.py
+```
+
+The loader now accepts explicit real-data spatial-temporal filters:
+
+```text
+--start-utc
+--end-utc
+--min-longitude
+--max-longitude
+--min-latitude
+--max-latitude
+```
+
+It reads the cleaned Parquet source, selects only rows that fall within the requested UTC time range and EPSG:4326 bounding box, preserves source lineage, creates `geometry(Point, 4326)` with longitude first, and uses the existing unique constraint to avoid duplicate AIS observations.
+
+Development validation command:
+
+```cmd
+python data\etl\load_ais_to_postgis.py --start-utc 2025-01-08T00:00:00Z --end-utc 2025-01-08T00:10:00Z --min-longitude -90.10000 --max-longitude -89.90000 --min-latitude 29.70000 --max-latitude 30.00000
+```
+
+Measured real-data result:
+
+| Metric | Value |
+|---|---:|
+| Selected AIS positions | 228 |
+| Selected unique MMSIs | 127 |
+| Database rows before load | 9,977 |
+| Database rows after load | 9,977 |
+| Newly inserted rows | 0 |
+
+The zero inserted rows are expected because all 9,977 observations from the local development Parquet had already been loaded. The loader remains safe and idempotent through the unique constraint on `(mmsi, observed_at, latitude, longitude)`.
+
+This development subset is not evidence for `SPILL_TEST3_001`, which has an origin-time window in 2026.
+
+### Vessel-track spatial-temporal query
+
+Track query:
+
+```text
+data/queries/vessel_tracks_within_bounds.sql
+```
+
+The query:
+
+- Filters AIS observations by UTC time range and EPSG:4326 bounds.
+- Groups real positions by MMSI.
+- Creates ordered `LineString` geometries using `ST_MakeLine(position ORDER BY observed_at)`.
+- Returns tracks only where at least two real observations are available.
+- Includes position count, time bounds, gap count, maximum gap, speed/course/heading, timestamps, and source-lineage values.
+- Does not interpolate positions or generate artificial AIS tracks.
+
+### Query benchmarks
+
+Baseline benchmark:
+
+```text
+data/queries/benchmark_vessel_tracks_within_bounds.sql
+```
+
+Measured baseline result:
+
+```text
+Access method: Sequential scan on ais_positions
+Planning time: 1.543 ms
+Execution time: 11.453 ms
+```
+
+Index-aware benchmark:
+
+```text
+data/queries/benchmark_vessel_tracks_with_spatial_index.sql
+```
+
+The index-aware query uses an EPSG:4326 envelope and PostGIS spatial predicates:
+
+```sql
+a.position && p.query_bounds
+AND ST_Intersects(a.position, p.query_bounds)
+```
+
+Measured index-aware result:
+
+```text
+Access method: Index Scan using idx_ais_positions_position_gist
+Planning time: 23.027 ms
+Execution time: 27.001 ms
+```
+
+Interpretation:
+
+- The index-aware query successfully used `idx_ais_positions_position_gist`.
+- The sequential scan was faster on the current 9,977-row development table because index traversal and spatial predicate overhead can exceed the cost of scanning a small table.
+- The index-aware query should be retained for spatial/corridor filtering on larger real AIS subsets, where GiST index selectivity is more valuable.
+- All measured timings are local-development benchmarks and must not be presented as production-scale performance claims.
