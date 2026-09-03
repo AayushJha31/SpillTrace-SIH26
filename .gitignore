@@ -36,3 +36,6 @@ data/manifests/scenario_compatibility_report.json
 
 # Generated AIS track GeoJSON exports
 data/ais/reports/*.geojson
+
+logs/
+*.jsonl
