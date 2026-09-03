@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.api.routes import system, scenes
+from app.schemas import scene
 
 app = FastAPI(title=settings.app_name)
 
@@ -29,3 +30,4 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 app.include_router(system.router, prefix=settings.api_prefix)
+app.include_router(scenes.router, prefix=settings.api_prefix)

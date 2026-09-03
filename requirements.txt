@@ -109,3 +109,4 @@ sqlalchemy
 python-multipart
 pytest
 httpx
+pydantic-settings
