@@ -372,3 +372,129 @@ The following work is outside Day 1–2 scope:
 - Full FastAPI database integration.
 - Production-scale table partitioning.
 - Automated satellite-data ingestion.
+
+
+### Automated ETL tests
+
+AIS ETL unit tests were added in:
+
+```text
+tests/test_ais_etl.py
+```
+
+Run command:
+
+```cmd
+python -m pytest tests\test_ais_etl.py -v
+```
+
+Result:
+
+```text
+5 passed
+```
+
+The tests use temporary test-only fixtures and do not modify the real AIS source file, cleaned Parquet output, PostGIS database, dashboard data, or scenario evidence.
+
+Validated behaviors:
+
+- Required-field validation rejects invalid timestamps, MMSIs, latitudes, and longitudes.
+- Duplicate AIS observations are removed using `(mmsi, observed_at, latitude, longitude)`.
+- Row conservation is verified:
+
+  ```text
+  input rows = rejected required-field rows + duplicate rows removed + cleaned rows
+  ```
+
+- MMSI is preserved as an integer-compatible identifier in the cleaned output.
+- `observed_at` is timezone-aware and uses UTC.
+- Cleaned AIS output is sorted by `mmsi`, then `observed_at`.
+- Per-vessel time-gap statistics are calculated.
+- Source-file and source-row lineage fields are preserved.
+- GeoJSON point coordinate convention is `[longitude, latitude]`.
+- Missing required columns produce a controlled `ValueError`.
+
+### Real cleaned Parquet validation
+
+Validation script:
+
+```text
+data/etl/validate_cleaned_ais_parquet.py
+```
+
+Run command:
+
+```cmd
+python data\etl\validate_cleaned_ais_parquet.py
+```
+
+Validation artifact:
+
+```text
+data/ais/reports/ais_sample_10000_parquet_validation.json
+```
+
+Verified real-data results:
+
+| Check | Result |
+|---|---:|
+| Input AIS rows | 10,000 |
+| Cleaned Parquet rows | 9,977 |
+| Duplicate observations removed during ETL | 23 |
+| Remaining duplicate observation groups in Parquet | 0 |
+| Unique MMSIs | 6,890 |
+| First timestamp UTC | 2025-01-08 00:00:00+00:00 |
+| Last timestamp UTC | 2025-01-08 18:49:10+00:00 |
+| Geographic longitude bounds | -159.35849 to -63.85972 |
+| Geographic latitude bounds | 14.54614 to 49.65558 |
+| Null `observed_at` values | 0 |
+| Null MMSI values | 0 |
+| Null latitude values | 0 |
+| Null longitude values | 0 |
+| Invalid MMSIs | 0 |
+| Invalid latitudes | 0 |
+| Invalid longitudes | 0 |
+| MMSI/time ordering violations | 0 |
+
+Parquet schema validation confirms:
+
+```text
+mmsi        BIGINT
+observed_at TIMESTAMP WITH TIME ZONE
+latitude    DOUBLE
+longitude   DOUBLE
+```
+
+The DuckDB validation session explicitly uses UTC:
+
+```python
+connection.execute("SET TimeZone='UTC'")
+```
+
+This prevents a developer machine’s local timezone from changing timestamps written into the validation report.
+
+### Scenario compatibility limitation
+
+The local AIS development dataset covers only:
+
+```text
+2025-01-08T00:00:00Z to 2025-01-08T18:49:10Z
+```
+
+The supplied `SPILL_TEST3_001` drift-origin window is:
+
+```text
+2026-09-01T10:00:00Z to 2026-09-01T14:00:00Z
+```
+
+Therefore, `data/ais/ais_sample_10000.csv` and its cleaned Parquet output are incompatible with `SPILL_TEST3_001` for real vessel attribution.
+
+The local AIS sample remains valid for ETL development, tests, PostGIS loading, and spatial-query development only. It must not be used as scenario evidence, and timestamps or vessel positions must not be modified to force compatibility.
+
+For `SPILL_TEST3_001`, vessel candidate ranking remains blocked until a real AIS source with verified temporal and geographic coverage is available. The supplied drift run is also labelled:
+
+```text
+Analyst Parameter-Driven Scenario Simulation
+```
+
+because wind/current source metadata is unavailable. It must not be described as independently data-backed environmental drift evidence.

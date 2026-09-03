@@ -13,16 +13,19 @@ REPORT_FILE = Path("data/ais/reports/ais_sample_10000_quality_report.json")
 SOURCE_FILE_LABEL = "data/ais/ais_sample_10000.csv"
 
 
-def main() -> None:
-    if not INPUT_FILE.exists():
-        raise FileNotFoundError(
-            f"Input AIS file not found: {INPUT_FILE}"
-        )
+def run_ais_etl(
+    input_file: Path,
+    output_file: Path,
+    report_file: Path,
+    source_file_label: str,
+) -> dict:
+    if not input_file.exists():
+        raise FileNotFoundError(f"Input AIS file not found: {input_file}")
 
-    OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    REPORT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    report_file.parent.mkdir(parents=True, exist_ok=True)
 
-    raw = pd.read_csv(INPUT_FILE, low_memory=False)
+    raw = pd.read_csv(input_file, low_memory=False)
     input_row_count = len(raw)
 
     df = raw.rename(
@@ -49,12 +52,11 @@ def main() -> None:
 
     if missing_columns:
         raise ValueError(
-            "Missing required columns: "
-            + ", ".join(missing_columns)
+            "Missing required columns: " + ", ".join(missing_columns)
         )
 
     df["source_row_number"] = df.index + 2
-    df["source_file"] = SOURCE_FILE_LABEL
+    df["source_file"] = source_file_label
 
     df["observed_at"] = pd.to_datetime(
         df["observed_at"],
@@ -165,7 +167,7 @@ def main() -> None:
     cleaned = cleaned[existing_output_columns]
 
     cleaned.to_parquet(
-        OUTPUT_FILE,
+        output_file,
         index=False,
         engine="pyarrow",
     )
@@ -183,8 +185,8 @@ def main() -> None:
     )
 
     report = {
-        "input_file": SOURCE_FILE_LABEL,
-        "output_file": str(OUTPUT_FILE),
+        "input_file": source_file_label,
+        "output_file": str(output_file),
         "input_row_count": int(input_row_count),
         "valid_before_deduplication_count": int(len(valid)),
         "cleaned_row_count": int(len(cleaned)),
@@ -199,12 +201,8 @@ def main() -> None:
             "duplicate_observation": duplicate_count,
         },
         "unique_mmsi_count": int(cleaned["mmsi"].nunique()),
-        "first_timestamp_utc": (
-            cleaned["observed_at"].min().isoformat()
-        ),
-        "last_timestamp_utc": (
-            cleaned["observed_at"].max().isoformat()
-        ),
+        "first_timestamp_utc": cleaned["observed_at"].min().isoformat(),
+        "last_timestamp_utc": cleaned["observed_at"].max().isoformat(),
         "gap_statistics_seconds": {
             "gap_count": int(len(gaps_seconds)),
             "max_gap": (
@@ -225,17 +223,34 @@ def main() -> None:
         },
     }
 
-    REPORT_FILE.write_text(
+    report_file.write_text(
         json.dumps(report, indent=2),
         encoding="utf-8",
     )
 
+    return report
+
+
+def main() -> None:
+    report = run_ais_etl(
+        input_file=INPUT_FILE,
+        output_file=OUTPUT_FILE,
+        report_file=REPORT_FILE,
+        source_file_label=SOURCE_FILE_LABEL,
+    )
+
     print("\n=== AIS ETL COMPLETED ===")
-    print(f"Input rows: {input_row_count:,}")
-    print(f"Valid rows before deduplication: {len(valid):,}")
-    print(f"Duplicate rows removed: {duplicate_count:,}")
-    print(f"Cleaned rows written: {len(cleaned):,}")
-    print(f"Unique MMSIs: {cleaned['mmsi'].nunique():,}")
+    print(f"Input rows: {report['input_row_count']:,}")
+    print(
+        "Valid rows before deduplication: "
+        f"{report['valid_before_deduplication_count']:,}"
+    )
+    print(
+        "Duplicate rows removed: "
+        f"{report['rejection_counts']['duplicate_observation']:,}"
+    )
+    print(f"Cleaned rows written: {report['cleaned_row_count']:,}")
+    print(f"Unique MMSIs: {report['unique_mmsi_count']:,}")
     print(f"Parquet output: {OUTPUT_FILE}")
     print(f"Quality report: {REPORT_FILE}")
 

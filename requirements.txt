@@ -108,5 +108,8 @@ pydantic
 sqlalchemy
 python-multipart
 pytest
-httpx
 pydantic-settings
+pyarrow
+duckdb
+pytz
+psycopg[binary]
