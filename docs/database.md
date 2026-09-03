@@ -774,3 +774,130 @@ compatibility_state: insufficient_data
 ```
 
 The export is map/timeline development output only. It uses the real local AIS development dataset dated 2025-01-08 and must not be used as vessel-attribution evidence for `SPILL_TEST3_001`, whose origin-time window is in 2026.
+
+
+## Drift-to-AIS compatibility gate
+
+### Safe blocked-result producer
+
+Implementation:
+
+```text
+data/queries/get_drift_ais_filter_result.py
+```
+
+The script reads the computed compatibility report:
+
+```text
+data/manifests/scenario_compatibility_report.json
+```
+
+and returns a safe Drift-to-AIS result for a requested `spill_id`.
+
+Run command:
+
+```cmd
+python data\queries\get_drift_ais_filter_result.py
+```
+
+For `SPILL_TEST3_001`, the measured result is:
+
+| Field | Value |
+|---|---|
+| HTTP status code | `409` |
+| Compatibility state | `insufficient_data` |
+| Candidate ranking enabled | `false` |
+| Returned AIS track count | `0` |
+| GeoJSON track container | `FeatureCollection` with empty `features` |
+| AIS quality status | `unavailable` |
+
+The response follows the backend blocked-response pattern:
+
+```json
+{
+  "http_status_code": 409,
+  "detail": {
+    "code": "PROTOTYPE_GEOREFERENCING_LIMITATION",
+    "message": "Vessel attribution is unavailable for this scenario. No vessel candidates have been generated.",
+    "spill_id": "SPILL_TEST3_001"
+  }
+}
+```
+
+The full blocking-reason list is retained in the response:
+
+```text
+PROTOTYPE_GEOREFERENCING_LIMITATION
+ENVIRONMENTAL_FORCING_NOT_DATA_BACKED
+AIS_TEMPORAL_COVERAGE_MISMATCH
+```
+
+### AIS quality behavior for blocked scenarios
+
+When compatibility is blocked, the system does not query or return irrelevant AIS tracks. It returns:
+
+```json
+{
+  "ais_quality_status": {
+    "status": "unavailable",
+    "track_count": 0,
+    "quality_fields": {
+      "ais_completeness": null,
+      "track_continuity": null,
+      "gap_statistics": null,
+      "source_provenance": null
+    }
+  }
+}
+```
+
+This explicitly distinguishes unavailable per-track quality values from valid calculated zero values. No vessel-level data-quality values are fabricated.
+
+### Automated safety tests
+
+Test file:
+
+```text
+tests/test_drift_ais_filter.py
+```
+
+Commands:
+
+```cmd
+python -m pytest tests\test_drift_ais_filter.py -v
+python -m pytest tests -v
+```
+
+Result:
+
+```text
+3 Day 6 tests passed
+8 total data-engineering tests passed
+```
+
+Tested safety cases:
+
+- A blocked scenario returns HTTP `409`.
+- A blocked scenario returns an empty GeoJSON `FeatureCollection`.
+- Candidate ranking remains disabled.
+- AIS quality is explicitly unavailable when no compatible AIS track subset exists.
+- Requested spill ID must match the compatibility-report spill ID.
+- A missing compatibility report fails safely.
+
+### Deferred compatible filtering branch
+
+The compatible Drift-to-AIS filtering branch is intentionally not implemented yet.
+
+It requires all of the following real inputs:
+
+```text
+1. Actual hindcast origin-corridor GeoJSON
+2. Compatible real AIS data with temporal coverage of the origin-time window
+3. Verified relevant AIS geographic coverage
+4. Compatibility state equal to compatible
+5. Data-backed environmental forcing or an explicitly approved scenario-mode policy
+```
+
+When these requirements are available and the compatibility gate passes, the Day 6 compatible branch will filter real AIS tracks by origin corridor and time window. It will preserve track continuity, gap statistics, AIS completeness, and source provenance.
+
+For the current `SPILL_TEST3_001` inputs, the system must remain blocked and must not produce vessel candidates.
