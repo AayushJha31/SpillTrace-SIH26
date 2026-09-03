@@ -24,6 +24,9 @@ __pycache__/
 # Temporary test files
 test_mask.png
 
-data/ais/cleaned/ais_sample_10000_cleaned.parquet
-data/ais/reports/ais_sample_10000_quality_report.json
-data/ais/reports/ais_sample_10000_parquet_validation.json
+# Local/generated AIS ETL artifacts
+data/ais/cleaned/
+data/ais/reports/
+.pytest_cache/
+__pycache__/
+*.pyc
