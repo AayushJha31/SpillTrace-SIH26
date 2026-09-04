@@ -13,9 +13,17 @@ dist/
 
 # Large SAR datasets
 data/sar/sar_samples/
+ml/oil-spill/
+ml/oil-spill-new/
 
 # Large AIS datasets
 data/ais/ais-2025-01-08.csv.zst
+ml/ais_sample_10000.csv
+
+ml/output_results/
+ml/*.pt
+ml/requirements_ml
+
 
 # Python cache
 __pycache__/
@@ -23,6 +31,7 @@ __pycache__/
 
 # Temporary test files
 test_mask.png
+ml/junk
 
 # Local/generated AIS ETL artifacts
 data/ais/cleaned/
@@ -39,3 +48,10 @@ data/ais/reports/*.geojson
 
 logs/
 *.jsonl
+
+#generated outputs
+ml/audit_outputs/
+ml/day3_outputs/
+ml/day4_outputs/
+ml/day5_outputs/
+
