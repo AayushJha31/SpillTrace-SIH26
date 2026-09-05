@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from app.api.routes.drift import router as drift_router
 from app.core.config import settings
 from app.api.routes import system, scenes, detections, spills
+from app.api.routes.candidates import router as candidates_router
 
 app = FastAPI(title=settings.app_name)
 
@@ -35,3 +36,4 @@ app.include_router(detections.router, prefix=settings.api_prefix)
 app.include_router(spills.router, prefix=settings.api_prefix)
 app.include_router(drift_router)
 app.include_router(detections.router, prefix='/api/v1')
+app.include_router(candidates_router)
