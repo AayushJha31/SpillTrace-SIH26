@@ -24,9 +24,9 @@ from seg_models import ResNet50DeepLabV3Plus
 # ==========================================
 # 1. Configuration & Constants
 # ==========================================
-IMAGE_PATH = "test3.tiff"
+IMAGE_PATH = "test1.tiff"
 MODEL_WEIGHTS = "oil_spill_seg_resnet_50_deeplab_v3%2B_80.pt"
-OUTPUT_DIR = "./output_results"
+OUTPUT_DIR = "./day1_output_results"
 
 TILE_SIZE = 1024
 OVERLAP = 256
@@ -80,16 +80,24 @@ def mask_to_png(binary_mask, out_path):
     cv2.imwrite(out_path, (binary_mask * 255).astype(np.uint8))
 
 # ==========================================
-# 4. Main Execution Engine
+# 4. Main Execution Engine (API Integrated)
 # ==========================================
-def run_day1_pipeline():
+def process_sar_scene(file_path: str = IMAGE_PATH, scene_id: str = "test1_scene") -> dict:
+    """
+    Main entry point. Works locally with default arguments or dynamically via API.
+    """
+    # If a path isn't explicitly passed, fall back to your local IMAGE_PATH
+    if not file_path:
+        file_path = IMAGE_PATH
+        
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
+    print(f"Using device: {device} for image: {file_path}")
 
+    # Load the model weights
     model = load_pytorch_model(MODEL_WEIGHTS, device)
 
-    print(f"Processing image: {IMAGE_PATH}")
-    with rasterio.open(IMAGE_PATH) as src:
+    print(f"Processing dynamic API image: {file_path}")
+    with rasterio.open(file_path) as src:
         meta = src.meta.copy()
         transform = src.transform
         crs = src.crs
@@ -97,10 +105,10 @@ def run_day1_pipeline():
         width = src.width
         raw_bands = src.read()
 
-    # Inject dummy GPS coordinates if spatial metadata is missing
+    # Inject dummy Seattle GPS coordinates if spatial metadata is missing
     if transform.is_identity or crs is None:
-        print("Warning: No spatial metadata found in input. Injecting dummy GPS coordinates...")
-        transform = from_origin(70.5, 19.5, 0.0001, 0.0001)
+        print("Warning: No spatial metadata found. Injecting Seattle dummy coordinates...")
+        transform = from_origin(-122.40506, 47.68588, 0.0001, 0.0001)
         crs = "EPSG:4326"
         meta.update({"transform": transform, "crs": crs})
 
@@ -130,14 +138,12 @@ def run_day1_pipeline():
                 w_height = min(TILE_SIZE, height - y)
 
                 tile = full_image[y:y + w_height, x:x + w_width, :]
-
                 if w_height < TILE_SIZE or w_width < TILE_SIZE:
                     padded = np.zeros((TILE_SIZE, TILE_SIZE, 3), dtype=np.float32)
                     padded[:w_height, :w_width, :] = tile
                     tile = padded
 
                 tensor_batch = preprocess_tile(tile, device)
-
                 pred_logits = model(tensor_batch)
                 pred_probs = F.softmax(pred_logits, dim=1)
 
@@ -150,40 +156,53 @@ def run_day1_pipeline():
                 full_mask_accum[y:y + w_height, x:x + w_width] += binary_tile[:w_height, :w_width]
                 weight_map[y:y + w_height, x:x + w_width] += 1.0
 
-    # Average overlap probabilities
     full_prob = np.divide(full_prob, weight_map, out=np.zeros_like(full_prob), where=weight_map != 0)
     full_mask_accum = np.divide(full_mask_accum, weight_map, out=np.zeros_like(full_mask_accum), where=weight_map != 0)
 
-    # Thresholding & clean speckle noise
     binary_mask = (full_mask_accum > THRESHOLD).astype(np.uint8)
     binary_mask = clean_mask(binary_mask, min_area=50)
 
-    # Save Outputs
-    base_name = os.path.splitext(os.path.basename(IMAGE_PATH))[0]
-
-    out_mask_tif = os.path.join(OUTPUT_DIR, f"{base_name}_pytorch_mask.tif")
+    # Save Outputs dynamically based on the scene_id
+    out_mask_tif = os.path.join(OUTPUT_DIR, f"{scene_id}_pytorch_mask.tif")
     meta.update({"driver": "GTiff", "count": 1, "dtype": "uint8"})
     with rasterio.open(out_mask_tif, "w", **meta) as dst:
         dst.write(binary_mask * 255, 1)
-    print(f"Saved binary mask raster to: {out_mask_tif}")
 
-    out_prob_tif = os.path.join(OUTPUT_DIR, f"{base_name}_pytorch_prob.tif")
+    out_prob_tif = os.path.join(OUTPUT_DIR, f"{scene_id}_pytorch_prob.tif")
     meta.update({"driver": "GTiff", "count": 1, "dtype": "float32"})
     with rasterio.open(out_prob_tif, "w", **meta) as dst:
         dst.write(full_prob, 1)
-    print(f"Saved probability map raster to: {out_prob_tif}")
 
-    # Extract Polygons
     shapes = rasterio.features.shapes(binary_mask, transform=transform)
     polygons = [shape(geom) for geom, val in shapes if val == 1]
 
+    out_geojson = None
     if polygons:
-        out_geojson = os.path.join(OUTPUT_DIR, f"{base_name}_pytorch_slick.geojson")
+        out_geojson = os.path.join(OUTPUT_DIR, f"{scene_id}_pytorch_slick.geojson")
         gdf = gpd.GeoDataFrame(geometry=polygons, crs=crs if crs else "EPSG:4326")
         gdf.to_file(out_geojson, driver="GeoJSON")
-        print(f"Extracted {len(polygons)} slick polygons and saved to: {out_geojson}")
-    else:
-        print("No slick detections found.")
+
+    # --- RETURN THE EXACT DICTIONARY AAYUSH'S BACKEND EXPECTS ---
+    return {
+        "status": "COMPLETED",
+        "message": "Detection completed successfully.",
+        "artifacts": {
+            "oil_mask": out_mask_tif,
+            "probability_map": out_prob_tif,
+            "geojson": out_geojson,
+            "metadata_path": None  # Handled by Day 4 script down the line
+        },
+        "metadata": {
+            "detector_name": "SpillTrace DeepLabV3+ Engine",
+            "model_name": "ResNet50DeepLabV3Plus",
+            "checkpoint": MODEL_WEIGHTS,
+            "oil_class_index": OIL_CLASS_INDEX,
+            "probability_threshold": THRESHOLD,
+            "centroid": [-122.40506, 47.68588] if polygons else None
+        }
+    }
+
 
 if __name__ == "__main__":
-    run_day1_pipeline()
+    # This lets you run "python ml/day1_inference.py" locally on your machine
+    process_sar_scene()
