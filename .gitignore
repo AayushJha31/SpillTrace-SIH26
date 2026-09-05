@@ -26,3 +26,62 @@ logs/candidate_audit.jsonl
 data/sar/test1.tiff
 
 test_mask.png
+
+
+
+# Node
+node_modules/
+dist/
+
+# Environment variables
+.env
+
+# Python virtual environment
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Large SAR datasets
+data/sar/sar_samples/
+ml/oil-spill/
+ml/oil-spill-new/
+
+# Large AIS datasets
+data/ais/ais-2025-01-08.csv.zst
+ml/ais_sample_10000.csv
+
+ml/output_results/
+ml/*.pt
+ml/requirements_ml
+
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Temporary test files
+test_mask.png
+ml/junk
+
+# Local/generated AIS ETL artifacts
+data/ais/cleaned/
+data/ais/reports/
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Generated compatibility validation output
+data/manifests/scenario_compatibility_report.json
+
+# Generated AIS track GeoJSON exports
+data/ais/reports/*.geojson
+
+logs/
+*.jsonl
+
+#generated outputs
+ml/audit_outputs/
+ml/day3_outputs/
+ml/day4_outputs/
+ml/day5_outputs/
