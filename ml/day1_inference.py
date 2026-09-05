@@ -7,6 +7,7 @@ Speckle Cleanup -> Output Generation.
 """
 
 import os
+from pathlib import Path
 import numpy as np
 import cv2
 import torch
@@ -19,13 +20,13 @@ from shapely.geometry import shape
 from rasterio.transform import from_origin
 
 # Import model architecture
-from seg_models import ResNet50DeepLabV3Plus
+from .seg_models import ResNet50DeepLabV3Plus
 
 # ==========================================
 # 1. Configuration & Constants
 # ==========================================
 IMAGE_PATH = "test1.tiff"
-MODEL_WEIGHTS = "oil_spill_seg_resnet_50_deeplab_v3%2B_80.pt"
+MODEL_WEIGHTS = str(Path(__file__).resolve().parent / "oil_spill_seg_resnet_50_deeplab_v3+_80.pt")
 OUTPUT_DIR = "./day1_output_results"
 
 TILE_SIZE = 1024
@@ -206,3 +207,5 @@ def process_sar_scene(file_path: str = IMAGE_PATH, scene_id: str = "test1_scene"
 if __name__ == "__main__":
     # This lets you run "python ml/day1_inference.py" locally on your machine
     process_sar_scene()
+
+

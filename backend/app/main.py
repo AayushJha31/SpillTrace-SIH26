@@ -3,8 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.api.routes import system, scenes
-from app.schemas import scene
+from app.api.routes import system, scenes, detections, spills
 
 app = FastAPI(title=settings.app_name)
 
@@ -31,3 +30,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 app.include_router(system.router, prefix=settings.api_prefix)
 app.include_router(scenes.router, prefix=settings.api_prefix)
+app.include_router(detections.router, prefix=settings.api_prefix)
+app.include_router(spills.router, prefix=settings.api_prefix)
+
+
+app.include_router(detections.router, prefix='/api/v1')
