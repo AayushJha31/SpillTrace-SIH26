@@ -26,3 +26,8 @@ logs/candidate_audit.jsonl
 data/sar/test1.tiff
 
 test_mask.png
+
+# Local SAR/test data
+backend/data/sar/
+data/sar/
+backend/tests/test_forecast.json

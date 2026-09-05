@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.api.routes.drift import router as drift_router
 from app.core.config import settings
 from app.api.routes import system, scenes, detections, spills
 
@@ -32,6 +33,5 @@ app.include_router(system.router, prefix=settings.api_prefix)
 app.include_router(scenes.router, prefix=settings.api_prefix)
 app.include_router(detections.router, prefix=settings.api_prefix)
 app.include_router(spills.router, prefix=settings.api_prefix)
-
-
+app.include_router(drift_router)
 app.include_router(detections.router, prefix='/api/v1')
