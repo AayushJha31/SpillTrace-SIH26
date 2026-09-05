@@ -1,0 +1,34 @@
+{
+  "version": "day9-freeze",
+  "ais_source": {
+    "file": "data/ais/ais_sample_10000.csv",
+    "description": "10,000-row AIS development subset for SpillTrace SIH 2026.",
+    "row_count": 10000,
+    "time_range_utc": {
+      "start": "2025-01-08T00:00:00+00:00",
+      "end": "2025-01-08T18:49:10+00:00"
+    },
+    "geographic_bounds": {
+      "min_longitude": -90.1,
+      "max_longitude": -89.9,
+      "min_latitude": 29.7,
+      "max_latitude": 30.0
+    }
+  },
+  "cleaned_parquet": {
+    "file": "data/ais/cleaned/ais_sample_10000_cleaned.parquet",
+    "row_count": 9977,
+    "unique_mmsi_count": 6890
+  },
+  "quality_reports": [
+    "data/ais/reports/ais_sample_10000_quality_report.json",
+    "data/ais/reports/ais_sample_10000_quality_report_with_scenario.json",
+    "data/ais/reports/day9_snapshot.json"
+  ],
+  "frontend_tracks": "data/ais/reports/vessel_tracks_frontend.geojson",
+  "compatibility_notes": [
+    "This subset is for ETL, map, and query development only.",
+    "It is explicitly incompatible with SPILL_TEST3_001.",
+    "Candidate ranking must remain disabled for this data."
+  ]
+}
