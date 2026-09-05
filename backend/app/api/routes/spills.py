@@ -6,7 +6,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.schemas import SpillGeometry, SpillMetadataResponse, SpillResponse, SpillUploadResponse
 
-router = APIRouter(prefix="/api/spills", tags=["spills"])
+router = APIRouter(prefix="/spills", tags=["spills"])
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 DATA_DIR = BASE_DIR / "data" / "sar"

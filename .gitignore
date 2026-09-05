@@ -1,57 +1,28 @@
-# Node
-node_modules/
-dist/
-
-# Environment variables
-.env
-
-# Python virtual environment
 .venv/
-
-# Jupyter
-.ipynb_checkpoints/
-
-# Large SAR datasets
-data/sar/sar_samples/
-ml/oil-spill/
-ml/oil-spill-new/
-
-# Large AIS datasets
-data/ais/ais-2025-01-08.csv.zst
-ml/ais_sample_10000.csv
-
-ml/output_results/
-ml/*.pt
-ml/requirements_ml
-
-
-# Python cache
+venv/
+env/
 __pycache__/
 *.py[cod]
-
-# Temporary test files
-test_mask.png
-ml/junk
-
-# Local/generated AIS ETL artifacts
-data/ais/cleaned/
-data/ais/reports/
 .pytest_cache/
-__pycache__/
-*.pyc
+.mypy_cache/
+.ipynb_checkpoints/
+.env
+.env.*
+!.env.example
+*.log
+.vscode/
+dist/
+build/
+*.egg-info/
+.DS_Store
+Thumbs.db
+mlruns/
+runs/
 
-# Generated compatibility validation output
-data/manifests/scenario_compatibility_report.json
+ml/oil_spill_seg_resnet_50_deeplab_v3+_80.pt
+day1_output_results/
+logs/candidate_audit.jsonl
 
-# Generated AIS track GeoJSON exports
-data/ais/reports/*.geojson
+data/sar/test1.tiff
 
-logs/
-*.jsonl
-
-#generated outputs
-ml/audit_outputs/
-ml/day3_outputs/
-ml/day4_outputs/
-ml/day5_outputs/
-
+test_mask.png

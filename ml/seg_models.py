@@ -3,8 +3,8 @@ import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 
-from decoder_models import DeepLabV3Plus, DeepLabV3
-from encoder_models import (
+from .decoder_models import DeepLabV3Plus, DeepLabV3
+from .encoder_models import (
     resnet18,
     resnet34,
     resnet50,
