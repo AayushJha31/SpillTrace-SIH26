@@ -133,3 +133,9 @@ pyarrow
 duckdb
 pytz
 psycopg[binary]
+numpy>=2.0
+pyproj>=3.6
+shapely>=2.0
+pydantic>=2.0
+fastapi>=0.100
+uvicorn>=0.30
